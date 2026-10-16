@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hungarian-English Vocabulary Memory Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow-x: hidden;
+        }
+        .perspective-1000 {
+            perspective: 1000px;
+        }
+        .transform-style-3d {
+            transform-style: preserve-3d;
+            transition: transform 0.4s cubic-bezier(0.4, 0.2, 0.2, 1);
+        }
+        .backface-hidden {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+        }
+        .rotate-y-180 {
+            transform: rotateY(180deg);
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-50 via-slate-50 to-blue-100 h-screen text-slate-800 flex flex-col justify-between overflow-hidden">
+
+    <header class="w-full bg-white/80 backdrop-blur-md shadow-sm border-b border-slate-200 py-2 px-4 z-50 flex-shrink-0">
+        <div class="max-w-7xl mx-auto flex flex-row justify-between items-center gap-2">
+            <div class="flex items-center space-x-2">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md shadow-indigo-200">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-base sm:text-lg font-bold bg-gradient-to-r from-indigo-600 to-blue-600 bg-clip-text text-transparent leading-tight">VocabMatch: HU-EN Pro</h1>
+                    <p class="text-[11px] text-slate-500 hidden sm:block">Match English terms with their Hungarian translations</p>
+                </div>
+            </div>
+            
+            <!-- Score & Stats Bar -->
+            <div class="flex items-center gap-2.5 bg-slate-100/90 px-3 py-1.5 rounded-xl border border-slate-200/60 text-xs font-medium">
+                <div class="flex items-center gap-1 text-indigo-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    <span id="timer">00:00</span>
+                </div>
+                <div class="h-3 w-px bg-slate-300"></div>
+                <div class="flex items-center gap-1 text-blue-700">
+                    <span>Flips: <strong id="flipCount">0</strong></span>
+                </div>
+                <div class="h-3 w-px bg-slate-300"></div>
+                <div class="flex items-center gap-1 text-emerald-700">
+                    <span>Pairs: <strong id="pairsCount">0</strong>/<span id="totalPairs">0</span></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl w-full mx-auto p-2 sm:p-4 flex-grow flex flex-col items-center justify-center overflow-hidden">
+        <!-- Control Panel -->
+        <div class="w-full max-w-5xl bg-white/80 backdrop-blur-md rounded-xl shadow-sm border border-slate-200/80 p-2.5 mb-3 flex flex-row items-center justify-between gap-3 flex-shrink-0">
+            <div class="flex items-center gap-2">
+                <label for="batchSizeSelect" class="text-xs font-semibold text-slate-700 whitespace-nowrap">Cards:</label>
+                <select id="batchSizeSelect" class="bg-slate-50 border border-slate-300 text-slate-700 text-xs rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-1.5">
+                    <option value="8">8 Pairs (16 cards)</option>
+                    <option value="12">12 Pairs (24 cards)</option>
+                    <option value="16" selected>16 Pairs (32 cards)</option>
+                    <option value="all">All Pairs (Complete)</option>
+                </select>
+            </div>
+            <div class="flex items-center gap-2">
+                <button id="restartBtn" class="px-3.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-medium rounded-lg shadow-sm shadow-indigo-200 transition-all flex items-center justify-center gap-1.5 text-xs">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                    New Game
+                </button>
+                <button id="viewListBtn" class="px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg border border-slate-300 transition-all text-xs">
+                    Vocab List
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Grid Container - Fitted to never scroll -->
+        <div id="gameGrid" class="w-full max-w-6xl grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2 sm:gap-2.5 items-center justify-center">
+            <!-- Dynamically populated cards go here -->
+        </div>
+    </main>
+
+    <!-- Win Modal -->
+    <div id="winModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 text-center border border-slate-100 transform transition-all scale-95 opacity-0 duration-300" id="winModalContent">
+            <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-inner">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h3 class="text-2xl font-bold text-slate-900 mb-2">Szép munka! Excellent!</h3>
+            <p class="text-slate-600 text-sm mb-6">You successfully matched all vocabulary pairs.</p>
+            <div class="bg-slate-50 rounded-2xl p-4 mb-6 border border-slate-100 grid grid-cols-2 gap-4">
+                <div>
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-semibold">Time Taken</span>
+                    <span id="finalTime" class="text-lg font-bold text-indigo-600">00:00</span>
+                </div>
+                <div>
+                    <span class="block text-xs text-slate-400 uppercase tracking-wider font-semibold">Total Flips</span>
+                    <span id="finalFlips" class="text-lg font-bold text-blue-600">0</span>
+                </div>
+            </div>
+            <button id="playAgainBtn" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition-all">
+                Play Again
+            </button>
+        </div>
+    </div>
+
+    <!-- Vocabulary List Modal -->
+    <div id="vocabModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-2xl w-full p-6 sm:p-8 flex flex-col max-h-[85vh] border border-slate-100">
+            <div class="flex justify-between items-center pb-4 border-b border-slate-100 mb-4">
+                <h3 class="text-xl font-bold text-slate-900">Vocabulary Bank (<span id="vocabTotalCount">0</span> pairs)</h3>
+                <button id="closeVocabModal" class="text-slate-400 hover:text-slate-600 p-1.5 rounded-lg hover:bg-slate-100 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            </div>
+            <div class="overflow-y-auto flex-grow pr-2 space-y-2" id="vocabListContainer">
+                <!-- Populated via JS -->
+            </div>
+        </div>
+    </div>
+
+    <footer class="w-full bg-white/60 border-t border-slate-200/60 py-2 text-center text-[11px] text-slate-500 flex-shrink-0">
+        Hungarian-English Vocabulary Learning Game &bull; Practice & Memorize
+    </footer>
+
+    <script>
+        const vocabularyData = [
+            { en: "at least", hu: "legalábbis" },
+            { en: "available", hu: "elérhető" },
+            { en: "be fluent in", hu: "folyékonyan beszél valamilyen nyelvet" },
+            { en: "be good with something", hu: "ügyesen bánik valamivel, ért hozzá" },
+            { en: "candidate", hu: "jelölt" },
+            { en: "career", hu: "hivatás" },
+            { en: "change (v./n.)", hu: "változás, módosítás; változtat, módosít" },
+            { en: "computer skills", hu: "számítógépes ismeretek" },
+            { en: "construction worker", hu: "építőmunkás" },
+            { en: "degree", hu: "diploma" },
+            { en: "delivery person", hu: "futár" },
+            { en: "do sth for a living", hu: "valamivel keresi a kenyerét" },
+            { en: "experience (n.)", hu: "tapasztalat" },
+            { en: "full-time job", hu: "teljes állás" },
+            { en: "give up", hu: "abbahagy, felad" },
+            { en: "however", hu: "de, azonban" },
+            { en: "in the beginning", hu: "kezdetben" },
+            { en: "interest (n.)", hu: "érdeklődés" },
+            { en: "join", hu: "csatlakozik, tagja lesz valaminek" },
+            { en: "licence", hu: "engedély, jogosítvány" },
+            { en: "lorry driver", hu: "kamionsofőr" },
+            { en: "midwife", hu: "szülésznő" },
+            { en: "natural", hu: "természetes" },
+            { en: "nowadays", hu: "manapság, napjainkban" },
+            { en: "overtime", hu: "túlóra" },
+            { en: "part-time job", hu: "részmunkaidős állás, másodállás" },
+            { en: "people skills", hu: "jó kommunikációs készség" },
+            { en: "previous", hu: "megelőző, előzetes" },
+            { en: "realise", hu: "ráébred" },
+            { en: "such as", hu: "például" },
+            { en: "suitable", hu: "alkalmas, rátermett" },
+            { en: "take up a hobby", hu: "új szabadidős tevékenységet kezd" },
+            { en: "university", hu: "egyetem" },
+            { en: "welder", hu: "hegesztő" }
+        ];
+
+        let cards = [];
+        let flippedCards = [];
+        let matchedPairs = 0;
+        let totalPairsGame = 16;
+        let flipCount = 0;
+        let timerInterval = null;
+        let secondsElapsed = 0;
+        let isProcessing = false;
+        let gameStarted = false;
+
+        const gameGrid = document.getElementById('gameGrid');
+        const timerDisplay = document.getElementById('timer');
+        const flipCountDisplay = document.getElementById('flipCount');
+        const pairsCountDisplay = document.getElementById('pairsCount');
+        const totalPairsDisplay = document.getElementById('totalPairs');
+        const restartBtn = document.getElementById('restartBtn');
+        const batchSizeSelect = document.getElementById('batchSizeSelect');
+        const winModal = document.getElementById('winModal');
+        const winModalContent = document.getElementById('winModalContent');
+        const finalTime = document.getElementById('finalTime');
+        const finalFlips = document.getElementById('finalFlips');
+        const playAgainBtn = document.getElementById('playAgainBtn');
+        const viewListBtn = document.getElementById('viewListBtn');
+        const vocabModal = document.getElementById('vocabModal');
+        const closeVocabModal = document.getElementById('closeVocabModal');
+        const vocabListContainer = document.getElementById('vocabListContainer');
+        const vocabTotalCount = document.getElementById('vocabTotalCount');
+
+        function initVocabList() {
+            vocabTotalCount.textContent = vocabularyData.length;
+            vocabListContainer.innerHTML = vocabularyData.map((item, index) => `
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100/80 transition-colors gap-2">
+                    <div class="font-semibold text-indigo-700 text-sm"><span class="text-slate-400 mr-2">${index + 1}.</span>${item.en}</div>
+                    <div class="text-slate-600 text-sm bg-white px-3 py-1 rounded-lg border border-slate-200/60 shadow-sm">${item.hu}</div>
+                </div>
+            `).join('');
+        }
+
+        function startTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            secondsElapsed = 0;
+            timerDisplay.textContent = "00:00";
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+                const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+                timerDisplay.textContent = `${mins}:${secs}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function getFormattedTime() {
+            const mins = Math.floor(secondsElapsed / 60).toString().padStart(2, '0');
+            const secs = (secondsElapsed % 60).toString().padStart(2, '0');
+            return `${mins}:${secs}`;
+        }
+
+        function initGame() {
+            stopTimer();
+            gameStarted = false;
+            secondsElapsed = 0;
+            timerDisplay.textContent = "00:00";
+            flipCount = 0;
+            flipCountDisplay.textContent = flipCount;
+            matchedPairs = 0;
+            flippedCards = [];
+            isProcessing = false;
+
+            const selectedVal = batchSizeSelect.value;
+            totalPairsGame = selectedVal === 'all' ? vocabularyData.length : parseInt(selectedVal);
+            pairsCountDisplay.textContent = matchedPairs;
+            totalPairsDisplay.textContent = totalPairsGame;
+
+            const shuffledVocab = [...vocabularyData].sort(() => 0.5 - Math.random());
+            const selectedVocab = shuffledVocab.slice(0, totalPairsGame);
+
+            cards = [];
+            selectedVocab.forEach((item, index) => {
+                cards.push({ id: index, text: item.en, lang: 'EN', pairId: index, matched: false });
+                cards.push({ id: index, text: item.hu, lang: 'HU', pairId: index, matched: false });
+            });
+
+            cards.sort(() => 0.5 - Math.random());
+            renderGrid();
+        }
+
+        function renderGrid() {
+            gameGrid.innerHTML = '';
+            cards.forEach((card, index) => {
+                const cardEl = document.createElement('div');
+                cardEl.className = `perspective-1000 h-20 sm:h-24 md:h-28 cursor-pointer select-none`;
+                cardEl.dataset.index = index;
+                
+                cardEl.innerHTML = `
+                    <div class="relative w-full h-full transform-style-3d rounded-xl shadow-sm ${card.matched ? 'rotate-y-180 opacity-90' : ''}" id="card-inner-${index}">
+                        <!-- Front Face (Hidden state with number on outside) -->
+                        <div class="absolute inset-0 w-full h-full bg-white border border-slate-200/80 rounded-xl flex flex-col items-center justify-center p-1 backface-hidden shadow-sm hover:border-indigo-300 hover:shadow-md transition-all group">
+                            <span class="absolute top-1 left-1.5 text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 transition-colors">${index + 1}</span>
+                            <div class="w-6 h-6 sm:w-7 sm:h-7 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center group-hover:scale-110 transition-transform mt-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            </div>
+                        </div>
+                        <!-- Back Face (Revealed state) -->
+                        <div class="absolute inset-0 w-full h-full bg-gradient-to-br ${card.lang === 'EN' ? 'from-indigo-600 to-blue-700 text-white' : 'from-slate-800 to-slate-900 text-white'} rounded-xl flex flex-col items-center justify-center p-2 rotate-y-180 backface-hidden shadow-md">
+                            <span class="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded-full ${card.lang === 'EN' ? 'bg-white/20 text-indigo-100' : 'bg-white/10 text-slate-300'} mb-0.5">${card.lang === 'EN' ? 'English' : 'Magyar'}</span>
+                            <span class="text-[11px] sm:text-xs font-semibold text-center leading-tight px-1 line-clamp-3">${card.text}</span>
+                        </div>
+                    </div>
+                `;
+
+                cardEl.addEventListener('click', () => handleCardClick(index));
+                gameGrid.appendChild(cardEl);
+            });
+        }
+
+        function handleCardClick(index) {
+            if (isProcessing) return;
+            const card = cards[index];
+            if (card.matched) return;
+
+            if (!gameStarted) {
+                gameStarted = true;
+                startTimer();
+            }
+
+            const cardInner = document.getElementById(`card-inner-${index}`);
+            
+            if (flippedCards.length === 1 && flippedCards[0].index === index) return;
+
+            cardInner.classList.add('rotate-y-180');
+            flippedCards.push({ index, ...card });
+
+            if (flippedCards.length === 2) {
+                flipCount++;
+                flipCountDisplay.textContent = flipCount;
+                isProcessing = true;
+
+                const [first, second] = flippedCards;
+
+                if (first.pairId === second.pairId && first.lang !== second.lang) {
+                    cards[first.index].matched = true;
+                    cards[second.index].matched = true;
+                    matchedPairs++;
+                    pairsCountDisplay.textContent = matchedPairs;
+                    flippedCards = [];
+                    isProcessing = false;
+
+                    if (matchedPairs === totalPairsGame) {
+                        stopTimer();
+                        setTimeout(showWinModal, 400);
+                    }
+                } else {
+                    setTimeout(() => {
+                        document.getElementById(`card-inner-${first.index}`).classList.remove('rotate-y-180');
+                        document.getElementById(`card-inner-${second.index}`).classList.remove('rotate-y-180');
+                        flippedCards = [];
+                        isProcessing = false;
+                    }, 850);
+                }
+            }
+        }
+
+        function showWinModal() {
+            finalTime.textContent = getFormattedTime();
+            finalFlips.textContent = flipCount;
+            winModal.classList.remove('hidden');
+            winModal.classList.add('flex');
+            setTimeout(() => {
+                winModalContent.classList.remove('scale-95', 'opacity-0');
+                winModalContent.classList.add('scale-100', 'opacity-100');
+            }, 50);
+        }
+
+        function hideWinModal() {
+            winModalContent.classList.add('scale-95', 'opacity-0');
+            setTimeout(() => {
+                winModal.classList.remove('flex');
+                winModal.classList.add('hidden');
+            }, 300);
+            initGame();
+        }
+
+        restartBtn.addEventListener('click', initGame);
+        batchSizeSelect.addEventListener('change', initGame);
+        playAgainBtn.addEventListener('click', hideWinModal);
+
+        viewListBtn.addEventListener('click', () => {
+            vocabModal.classList.remove('hidden');
+            vocabModal.classList.add('flex');
+        });
+
+        closeVocabModal.addEventListener('click', () => {
+            vocabModal.classList.remove('flex');
+            vocabModal.classList.add('hidden');
+        });
+
+        vocabModal.addEventListener('click', (e) => {
+            if (e.target === vocabModal) {
+                vocabModal.classList.remove('flex');
+                vocabModal.classList.add('hidden');
+            }
+        });
+
+        window.onload = () => {
+            initVocabList();
+            initGame();
+        };
+    </script>
+</body>
+</html>
